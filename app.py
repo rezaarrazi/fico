@@ -111,6 +111,7 @@ def main():
 
                     if get_company_info:
                         company_info_full = ticker.info
+                        company_info_md = "## Company Info\n\n"
                         if company_info_full:
                             company_info_cleaned = {
                                 "Name": company_info_full.get("shortName"),
@@ -143,24 +144,24 @@ def main():
                                 "Gross Margins": company_info_full.get("grossMargins"),
                                 "Ebitda Margins": company_info_full.get("ebitdaMargins"),
                             }
-                            company_info_md = "## Company Info\n\n"
                             for key, value in company_info_cleaned.items():
                                 if value:
                                     company_info_md += f"  - {key}: {value}\n\n"
-                            # company_info_container.markdown(company_info_md)
                             report_input += "This section contains information about the company.\n\n"
-                            report_input += company_info_md
-                            report_input += "---\n"
-
+                        
                             description = f"""Provides current company information about {stock_name}.
                                 Use a detailed plain text question as input to the tool."""
                             research_assistant.create_query_engine_tool_from_md(company_info_md, stock_name+"_company_info", description)
-
+                        else:
+                            company_info_md += "No information found for this company.\n"
+                        
+                        report_input += company_info_md
+                        report_input += "---\n"
                     if get_company_news:
                         ddgs = DDGS()
                         company_news = ddgs.news(keywords=ticker_to_research+" stocks", max_results=5)
+                        company_news_md = "## Company News\n\n\n"
                         if len(company_news) > 0:
-                            company_news_md = "## Company News\n\n\n"
                             for news_item in company_news:
                                 company_news_md += f"#### {news_item['title']}\n\n"
                                 if "date" in news_item:
@@ -172,39 +173,45 @@ def main():
                                 if "body" in news_item:
                                     company_news_md += f"{news_item['body']}"
                                 company_news_md += "\n\n"
-
+                                report_input += "This section contains the most recent news articles about the company.\n\n"
+                        
                                 description = f"""Provides 5 current news about {stock_name}.
                                     No input is required."""
                                 research_assistant.create_query_engine_tool_from_md(company_news_md, stock_name+"_company_news", description)
+                        else:
+                            company_news_md += "No news found for this company.\n"
                                 
-                            report_input += "This section contains the most recent news articles about the company.\n\n"
-                            report_input += company_news_md
-                            report_input += "---\n"
+                        report_input += company_news_md
+                        report_input += "---\n"
                             
                     if get_analyst_recommendations:
                         analyst_recommendations = ticker.recommendations
+                        report_input += "## Analyst Recommendations\n\n"
                         if not analyst_recommendations.empty:
                             analyst_recommendations_md = analyst_recommendations.to_markdown()
-                            report_input += "## Analyst Recommendations\n\n"
                             report_input += "This table outlines the most recent analyst recommendations for the stock.\n\n"
                             report_input += f"{analyst_recommendations_md}\n"
 
                             description = f"""Provides analyst recommendation about {stock_name}.
                                 No input is required."""
                             research_assistant.create_query_engine_tool_from_md(analyst_recommendations_md, stock_name+"_analyst_recommendations", description)
+                        else:
+                            report_input += "No analyst recommendations found for this stock.\n"
                         report_input += "---\n"
                         
                     if get_upgrades_downgrades:
                         upgrades_downgrades = ticker.upgrades_downgrades[0:20]
+                        report_input += "## Upgrades/Downgrades\n\n"
                         if not upgrades_downgrades.empty:
                             upgrades_downgrades_md = upgrades_downgrades.to_markdown()
-                            report_input += "## Upgrades/Downgrades\n\n"
                             report_input += "This table outlines the most recent upgrades and downgrades for the stock.\n\n"
                             report_input += f"{upgrades_downgrades_md}\n"
 
                             description = f"""Provides upgrades and downgrades of {stock_name}.
                                 No input is required."""
                             research_assistant.create_query_engine_tool_from_md(upgrades_downgrades_md, stock_name+"_upgrades_downgrades_md", description)
+                        else:
+                            report_input += "No upgrades or downgrades found for this stock.\n"
                         report_input += "---\n"
                     
                     st.session_state.report_input = report_input
@@ -267,6 +274,7 @@ def main():
                     Make your report engaging, informative, and well-structured.
                     When you share numbers, make sure to include the units (e.g., millions/billions) and currency.
                     REMEMBER: This report is for a very important client, so the quality of the report is important.
+                    Make sure your recommendations are well-supported and backed by data.
                     Make sure your report is properly formatted and follows the <report_format> provided below.
                     If you don't have enough information for a section, you can leave it blank.
                     {report_format}
